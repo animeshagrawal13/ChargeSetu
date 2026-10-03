@@ -47,13 +47,17 @@ export default function ChargerPage({ params }: { params: Promise<{ id: string }
       end.setDate(end.getDate() + 1); // Wraps midnight
     }
 
+    // Real physics: Power (kW) * Time (hours) = Energy (kWh)
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    const estimatedKwh = Math.round(durationHours * charger.powerKw * 10) / 10;
+
     const res = await createBookingAction({
       chargerId: charger.id,
       hostId: charger.hostId,
       riderId: user.id,
       slotStart: start.getTime(),
       slotEnd: end.getTime(),
-      estimatedKwh: 2.5, // Mock estimate
+      estimatedKwh,
     });
 
     if (res.ok) {
@@ -152,7 +156,20 @@ export default function ChargerPage({ params }: { params: Promise<{ id: string }
             <p className="text-sm font-semibold text-navy">
               {selectedSlot ? TIME_SLOTS.find(s => s.id === selectedSlot)?.label : 'Select a slot'}
             </p>
-            <p className="text-xs text-muted">Est. top-up: ~2.5 kWh</p>
+            {selectedSlot && (
+              <p className="text-xs text-muted">
+                Est. max top-up: ~{
+                  (() => {
+                    const s = TIME_SLOTS.find(x => x.id === selectedSlot);
+                    if (!s) return '0';
+                    let endH = s.endHour;
+                    if (endH < s.startHour) endH += 24;
+                    const h = endH - s.startHour;
+                    return Math.round(h * charger.powerKw * 10) / 10;
+                  })()
+                } kWh
+              </p>
+            )}
           </div>
           <Button 
             size="lg" 

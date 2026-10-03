@@ -62,6 +62,7 @@ export default function SafetyPage() {
   const [category, setCategory] = useState<string | null>(null);
   const [details, setDetails] = useState('');
   const [sent, setSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
     <div className="min-h-dvh bg-surface">
@@ -138,8 +139,7 @@ export default function SafetyPage() {
               <div>
                 <p className="font-semibold text-navy">Report received</p>
                 <p className="mt-1 text-sm text-navy/75">
-                  Our team will review this listing. In this demo build the report stays on your
-                  device — nothing is transmitted.
+                  Our team will review this listing. The report has been securely saved to the database.
                 </p>
                 <Button
                   variant="secondary"
@@ -198,10 +198,20 @@ export default function SafetyPage() {
                 variant="danger"
                 size="lg"
                 className="mt-5 w-full"
-                disabled={!category}
-                onClick={() => setSent(true)}
+                disabled={!category || isSubmitting}
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  const { submitSafetyReportAction } = await import('@/lib/host/actions');
+                  const res = await submitSafetyReportAction(category as string, details);
+                  if (res.ok) {
+                    setSent(true);
+                  } else {
+                    alert('Failed to submit report');
+                  }
+                  setIsSubmitting(false);
+                }}
               >
-                Submit report
+                {isSubmitting ? 'Submitting...' : 'Submit report'}
               </Button>
             </>
           )}

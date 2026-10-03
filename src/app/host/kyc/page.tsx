@@ -61,6 +61,7 @@ export default function HostKycPage() {
   const [idType, setIdType] = useState<'aadhaar' | 'pan'>('aadhaar');
   const [idNumber, setIdNumber] = useState('');
   const [idPhoto, setIdPhoto] = useState<string | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
 
   const index = FLOW.indexOf(step);
   const back = () => index > 0 && setStep(FLOW[index - 1]);
@@ -450,12 +451,28 @@ export default function HostKycPage() {
                 <Button
                   size="lg"
                   className="mt-8 w-full"
-                  onClick={() => setDocs(allDocs('verified'))}
+                  disabled={isApproving}
+                  onClick={async () => {
+                    setIsApproving(true);
+                    const { submitKycAction } = await import('@/lib/host/actions');
+                    const res = await submitKycAction({
+                      ownership, selfie, fullName, dob, gender, address, consumerNo, idType, idLast4: idNumber.slice(-4)
+                    });
+                    if (res.ok) {
+                      setDocs(allDocs('verified'));
+                      setTimeout(() => {
+                        window.location.href = '/host/onboarding'; // Full reload to get new session context easily
+                      }, 500);
+                    } else {
+                      alert('Failed to submit KYC');
+                      setIsApproving(false);
+                    }
+                  }}
                 >
-                  Approve now (demo)
+                  {isApproving ? 'Submitting...' : 'Submit Documents'}
                 </Button>
                 <p className="mt-2 text-center text-xs text-muted">
-                  Stands in for the verification partner so a demo need not wait 24 hours.
+                  Submits real data to the Neon database.
                 </p>
               </>
             )}
