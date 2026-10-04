@@ -89,7 +89,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = useCallback(
     async (patch: Partial) => {
       if (!user) return;
-      // Fixed type mismatch for createdAt
       const updated = await updateUserAction(patch as any);
       if (updated) setUser(updated as unknown as User);
     },
