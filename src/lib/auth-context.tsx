@@ -18,13 +18,13 @@ type AuthState = {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signup: (data: SignupData) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => Promise;
-  refresh: () => Promise;
-  switchRole: (role: 'rider' | 'host' | 'both') => Promise;
-  updateProfile: (patch: Partial) => Promise;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
+  switchRole: (role: 'rider' | 'host' | 'both') => Promise<void>;
+  updateProfile: (patch: Partial<User>) => Promise<void>;
 };
 
-const AuthContext = createContext({
+const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
   login: async () => ({ ok: false }),
@@ -36,41 +36,35 @@ const AuthContext = createContext({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     const u = await getCurrentUserAction();
-    setUser(u as unknown as User);
+    setUser(u as unknown as User | null);
   }, []);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
 
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const res = await loginAction(email, password);
-      if (res.ok && res.user) {
-        setUser(res.user as unknown as User);
-        return { ok: true };
-      }
-      return { ok: false, error: res.error };
-    },
-    []
-  );
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await loginAction(email, password);
+    if (res.ok && res.user) {
+      setUser(res.user as unknown as User);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  }, []);
 
-  const signup = useCallback(
-    async (data: SignupData) => {
-      const res = await signupAction(data);
-      if (res.ok && res.user) {
-        setUser(res.user as unknown as User);
-        return { ok: true };
-      }
-      return { ok: false, error: res.error };
-    },
-    []
-  );
+  const signup = useCallback(async (data: SignupData) => {
+    const res = await signupAction(data);
+    if (res.ok && res.user) {
+      setUser(res.user as unknown as User);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  }, []);
 
   const logout = useCallback(async () => {
     await logoutAction();
@@ -87,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateProfile = useCallback(
-    async (patch: Partial) => {
+    async (patch: Partial<User>) => {
       if (!user) return;
       const updated = await updateUserAction(patch as any);
       if (updated) setUser(updated as unknown as User);
@@ -100,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, loading, login, signup, logout, refresh, switchRole, updateProfile]
   );
 
-  return {children};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
