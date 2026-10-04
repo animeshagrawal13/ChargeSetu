@@ -18,13 +18,13 @@ type AuthState = {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signup: (data: SignupData) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => Promise<void>;
-  refresh: () => Promise<void>;
-  switchRole: (role: 'rider' | 'host' | 'both') => Promise<void>;
-  updateProfile: (patch: Partial<User>) => Promise<void>;
+  logout: () => Promise;
+  refresh: () => Promise;
+  switchRole: (role: 'rider' | 'host' | 'both') => Promise;
+  updateProfile: (patch: Partial) => Promise;
 };
 
-const AuthContext = createContext<AuthState>({
+const AuthContext = createContext({
   user: null,
   loading: true,
   login: async () => ({ ok: false }),
@@ -36,7 +36,7 @@ const AuthContext = createContext<AuthState>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -87,9 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateProfile = useCallback(
-    async (patch: Partial<User>) => {
+    async (patch: Partial) => {
       if (!user) return;
-      const updated = await updateUserAction(patch);
+      // Fixed type mismatch for createdAt
+      const updated = await updateUserAction(patch as any);
       if (updated) setUser(updated as unknown as User);
     },
     [user]
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, loading, login, signup, logout, refresh, switchRole, updateProfile]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return {children};
 }
 
 export function useAuth() {
